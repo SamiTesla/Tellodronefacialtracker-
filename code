@@ -1,0 +1,74 @@
+from djitellopy import tello
+import cv2
+import numpy as np
+import time
+
+drone = tello.Tello()
+w, h = 360, 240
+drone.send_rc_control(0, 0, 25, 0)
+drone.connect()
+print(drone.get_battery())
+print(drone.get_temperature())
+rge = [62800, 6800]
+time.sleep(3)
+drone.takeoff()
+time.sleep(3)
+drone.streamon()
+time.sleep(3)
+
+pError = 0
+
+pid = [0.4, 0.4, 0]
+time.sleep(.5)
+
+
+def find():
+    cascade_object = cv2.CascadeClassifier('C:/Users/admin/Desktop/images/haarcascade_frontalface_default.xml')
+    img.grey = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    grayscale = cascade_object.detectMultiScale(img.grey)
+    clist = []
+    listarea = []
+    for (x, y, z, w, h) in range:
+        cv2.rectangle(img, (x, y), (x + y, y + h), (0, 0, 225), 2)
+        x = x + w // 2
+        y = y + h // 2
+        area = w * h
+        cv2.circle(img, (x, y), 5, (0, 255, 0), cv2.FILLED)
+        clist.append([x, y])
+        listarea.append(area)
+        if len(listarea) != 0:
+            i = listarea.index(max(listarea))
+            return img, [clist[i], listarea[i]]
+        else:
+            return img, [[0, 0], 0]
+
+
+def track(drone, info, w, pid, pError):
+    area = info[1]
+    x, y = info[0]
+    fb = 0
+    error = x - w // 2
+    speed = pid[0] * error + pid[1] * (error - pError)
+    speed = int(np.clip(speed, -100, 100))
+    if rge[0] < area < rge[1]:
+        fb = -0
+    elif area < rge[1]:
+        fb = -20
+
+    if x == 0:
+        speed = 0
+        error = 0
+    print(speed, fb)
+    drone.send_rc_control(0, fb, 0, speed)
+    return error
+
+
+while True:
+
+    pError = track(drone, info, w, pid, pError)
+    img, info = (find(img))
+    print("Area", info[1], "Center", info[0])
+
+    cv2.imshow("image", img)
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        drone.land()
