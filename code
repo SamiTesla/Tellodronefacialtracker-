@@ -2,11 +2,13 @@ from djitellopy import tello
 import cv2
 import numpy as np
 import time
+import threading import Thread
 
 drone = tello.Tello()
 w, h = 360, 240
 drone.send_rc_control(0, 0, 25, 0)
 drone.connect()
+record= True
 print(drone.get_battery())
 print(drone.get_temperature())
 rge = [62800, 6800]
@@ -15,12 +17,21 @@ drone.takeoff()
 time.sleep(3)
 drone.streamon()
 time.sleep(3)
-
+readingframe=tello.get_frame_read()
 pError = 0
 
 pid = [0.4, 0.4, 0]
 time.sleep(.5)
-
+def recordvideo():
+    height=frame_read.frame.shape
+    width=frame_read.frame.shape
+    video=cv2.VideoWriter('video.avi',cv2.VideoWriter_fourcc(*'XVID'),30,(width,height))
+    while record:
+        video.write(frame_read.frame)
+        time.sleep(1/15)
+    video.release()
+recorder=Thread(target=recordvideo)
+record.start()
 
 def find():
     cascade_object = cv2.CascadeClassifier('C:/Users/admin/Desktop/images/haarcascade_frontalface_default.xml')
@@ -72,3 +83,5 @@ while True:
     cv2.imshow("image", img)
     if cv2.waitKey(1) & 0xFF == ord('q'):
         drone.land()
+        recordvideo=False
+        recorder.join()
